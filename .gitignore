@@ -1,0 +1,30 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Datasets and checkpoints are large and reproducible; results JSON is not.
+# Leading slash matters: a bare "data/" would also match src/data/ and
+# silently drop the degradation operator from the repo.
+/data/
+/checkpoints/
+*.pth
+*.pt
+*.ckpt
+
+# Keep results/ tracked -- the JSON rows are the experiment record.
+!results/
+results/**/*.png
+
+.DS_Store
+.ipynb_checkpoints/
+
+# LaTeX build products
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.synctex.gz
+*.fls
+*.fdb_latexmk

@@ -1,0 +1,20 @@
+# Core. The degradation pipeline, the distortion metrics and the self-test
+# need only these two.
+numpy>=1.24
+scikit-image>=0.21        # cross-check for our SSIM, bundled test images
+
+# Images and config
+pillow>=10.0
+pyyaml>=6.0
+
+# Model, sampler, LPIPS. Install the CUDA build that matches your driver:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+torch>=2.1
+torchvision>=0.16
+lpips>=0.1.4              # Zhang et al., CVPR 2018 -- reference implementation
+
+# Sweep bookkeeping and analysis
+tqdm>=4.65
+pandas>=2.0
+scipy>=1.11               # Wilcoxon signed-rank, Spearman
+matplotlib>=3.7

@@ -1,0 +1,57 @@
+# Base configuration. Every run writes a copy of its resolved config next to
+# its results JSON, so a result can always be traced back to the exact
+# protocol that produced it.
+#
+# The degradation block is the one thing in this project that must never
+# change after the first training run. Swapping the bicubic implementation
+# would move every number by more than the effects we are measuring.
+
+degradation:
+  impl: matlab_bicubic        # src.data.degradation.imresize -- do not change
+  scale: 4
+  antialias: true             # the prefilter; PIL/OpenCV omit it when shrinking
+  modcrop: true
+
+data:
+  root: data
+  train: DIV2K_train_HR       # 800 images, training only
+  val: DIV2K_valid_HR         # 100 images, checkpoint selection only
+  test:
+    - Set5                    # 5 images, verification against published PSNR
+    - Set14                   # 14 images, same purpose
+    - BSD100                  # 100 images, stochastic texture
+    - Urban100                # 100 images, regular man-made structure
+  # Always regenerate LR with our own degradation function. The LR images
+  # shipped alongside these benchmarks were made with a different imresize and
+  # would introduce a train/test mismatch.
+  use_shipped_lr: false
+
+metrics:
+  psnr:
+    channel: y                # luma of YCbCr, BT.601 studio range
+    border: 4                 # = scale, per the EDSR benchmark protocol
+  ssim:
+    channel: y
+    border: 4
+  lpips:
+    net: alex                 # AlexNet backbone with learned calibration
+    border: 0                 # full RGB image, per Zhang et al. and SR3
+  lr_consistency:
+    border: 0
+  cross_seed:
+    ddof: 1                   # estimating a posterior std from few samples
+
+sweep:
+  strengths: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+  seeds: [0, 1, 2, 3, 4]
+  # s = 0 degenerates to the bicubic upsample and is computed analytically
+  # rather than sampled, so it needs only one "seed".
+  ddim:
+    n_steps_at_full: 50
+    fixed_step_spacing: true  # so lower s really means fewer steps
+    eta: 0.0                  # 0 = deterministic DDIM given the initial noise
+  back_projection: false      # the H3 intervention; a second sweep sets true
+
+results:
+  dir: results
+  one_json_per: sample        # never overwrite; the sweep is resumable

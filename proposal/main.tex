@@ -1,0 +1,176 @@
+\documentclass{article}
+
+% The official style file. Download
+%   https://media.neurips.cc/Conferences/NeurIPS2025/Styles.zip
+% and place neurips_2025.sty beside this file. A layout-matched stand-in is
+% included in this directory so the page count can be checked; overwrite it
+% with the official file before submitting.
+\usepackage[final]{neurips_2025}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+
+\title{Faithful Diffusion-Based Image Super-Resolution}
+
+% TODO: replace with the full author list.
+\author{%
+  Shambhavi \textcolor{red}{[last name]}, University of California San Diego\\
+  \texttt{shambhavi12001@gmail.com}
+}
+
+\begin{document}
+\maketitle
+
+\section{Research problem}
+
+Conditional diffusion models give the best perceptual quality known for
+single-image super-resolution \citep{saharia2023sr3}, sampling from a learned
+approximation of the posterior $p(x \mid y)$ over high-resolution images
+consistent with a low-resolution observation $y$. At $4\times$ that posterior
+is broad, so the sampler commits to detail the measurement does not determine:
+a plausible texture, a sharpened edge, a character that looks legible on no
+evidence. Perceptually this is an improvement; as a measurement it is
+fabrication.
+
+Partial forward diffusion \citep{meng2022sdedit} makes the amount controllable
+through one scalar $s \in [0,1]$: noise the bicubic upsample of $y$ to timestep
+$t_0 = \lfloor sT \rfloor$, then denoise to zero; $s=0$ returns bicubic, $s=1$ is full
+generative sampling. For super-resolution this knob
+is essentially unmeasured.
+
+We ask: \textbf{(Q1)} for a fixed model and fixed $y$, as $s$ rises, how do
+perceptual quality, distortion, measurement fidelity and hallucination each
+move, and does the pattern differ for stochastic texture versus regular
+man-made structure? \textbf{(Q2)} does an explicit reconstruction
+constraint---projecting each sampler iterate back onto the images consistent
+with $y$---\emph{translate} the trade-off curve toward faithfulness, or only
+move the operating point along it? \citet{blau2018perception} prove a trade-off
+must exist, not that a given sampler sits on its frontier; Q2 asks whether this
+one does.
+
+\section{Why this problem is important}
+
+Because the trade-off is unavoidable \citep{blau2018perception} there is no
+best operating point, only a choice---made implicitly today,
+by picking a model and a sampler, with no map of what the alternatives cost.
+The cost of an invented detail is also asymmetric: a blurry reconstruction is
+honest about its ignorance, a sharp wrong one is not, and in medical, forensic
+and scientific imaging the second failure is the damaging one
+\citep{tivnan2024hallucination}. Hallucination has meanwhile acquired a precise
+definition: \citet{cohen2024looks} identify it with posterior uncertainty,
+measurable as disagreement among samples sharing $y$, which is what makes a
+systematic sweep possible now.
+
+\section{Existing work and its limitations}
+
+SR3 \citep{saharia2023sr3} established conditional diffusion super-resolution
+by concatenating the bicubic upsample of $y$ to the denoiser input; it notes
+that distortion metrics worsen, but samples at one fixed strength. SDEdit
+\citep{meng2022sdedit} introduced the strength knob as a realism--faithfulness
+dial, but for stroke-based editing, with no ground truth and no measurement
+operator, so it quantifies neither distortion nor hallucination.
+Consistency-enforcing samplers---DDNM \citep{wang2023ddnm}, diffusion posterior
+sampling \citep{chung2023dps}, ILVR \citep{choi2021ilvr}---show fidelity to
+$y$ can be imposed, but each evaluates a single configuration; none asks how the
+constraint reshapes the trade-off. Closest to our question,
+\citet{tivnan2024hallucination} note in passing that more modest denoising
+strengths reduce hallucination, on one medical modality with a single scalar
+index, no sweep and no intervention tested; and \citet{cohen2024looks} supply
+the uncertainty-based estimator, validated on BSD100 at $4\times$ bicubic,
+exactly our protocol, but to compare models rather than to trace one across
+strengths.
+
+The field thus has a theorem, isolated point measurements, a knob borrowed from
+editing, and one anecdote; missing is a \emph{measured curve} of faithfulness
+and hallucination against perceptual quality as continuous functions of strength
+within one trained model, plus a controlled test of whether data consistency
+moves it.
+
+\section{Proposed solution}
+
+\textbf{Model and knob.} One conditional diffusion model in the SR3 formulation
+\citep{saharia2023sr3}: $\epsilon$-prediction DDPM objective
+\citep{ho2020ddpm}, bicubic upsample of $y$ concatenated channel-wise to the
+noisy target, trained at $4\times$ on the 800 DIV2K training images
+\citep{agustsson2017div2k} with our own degradation operator. Exactly one model
+is trained; all baselines are deterministic or pretrained.
+Sampling is DDIM \citep{song2021ddim} with $\eta=0$ from $t_0 = \lfloor sT
+\rfloor$, step spacing fixed at $T/50$, so smaller $s$ means strictly fewer
+network evaluations and compute becomes a reported third axis.
+
+\textbf{Measurement}, per $(s, \text{seed}, \text{image})$: LPIPS
+\citep{zhang2018lpips}; $Y$-channel PSNR and SSIM \citep{wang2004ssim} with a
+4-pixel border crop, per the EDSR protocol \citep{lim2017edsr}; LR consistency,
+the PSNR between the bicubic decimation of the output and $y$; the per-pixel
+standard deviation across seeds, image-averaged, as
+hallucination-as-posterior-uncertainty \citep{cohen2024looks}; and median
+wall-clock. The last two need no ground truth.
+
+\textbf{Design.} $s \in \{0, 0.2, 0.4, 0.6, 0.8, 1.0\}$ crossed with five seeds
+on BSD100 \citep{martin2001bsds} and Urban100 \citep{huang2015urban100}, a
+contrast pair: invented stochastic texture is perceptually cheap, invented
+regular structure is not. Set5 and Set14 only confirm the pipeline
+reproduces published numbers; baselines are bicubic ($s=0$) and pretrained EDSR
+\citep{lim2017edsr}. We then insert DDNM back-projection \citep{wang2023ddnm},
+$\hat{x}_0 \leftarrow \hat{x}_0 - H^\dagger(H\hat{x}_0 - y)$, at every step
+and repeat the identical sweep, so the constraint is the only difference between
+the curves. Analysis is paired per image: bootstrap intervals,
+Wilcoxon signed-rank between adjacent strengths with Holm correction
+\citep{holm1979simple}, Spearman for monotonicity. Hypotheses: \textbf{(H1)}
+LPIPS improves while PSNR and LR consistency degrade monotonically in $s$;
+\textbf{(H2)} cross-seed deviation rises with $s$ and correlates with the LPIPS
+gain; \textbf{(H3)}
+back-projection translates the curve, giving equal LPIPS at higher LR
+consistency.
+
+\section{Novelty and significance}
+
+The novelty is the measurement, not a new sampler. We are not aware of work
+that traces the perception--faithfulness trade-off as a continuous function of
+generative strength within one diffusion model, with hallucination measured as
+posterior uncertainty rather than inferred from falling PSNR, and that then
+tests whether a data-consistency constraint translates the curve. We do not claim
+H1's phenomenon as new---\citet{tivnan2024hallucination} noted it---only its
+systematic measurement, with uncertainty quantified and multiple-comparison
+control. The product is an operating-point map: for a faithfulness budget in dB
+of LR consistency, which $s$ to run and what it costs in LPIPS and in seconds.
+It separates blur from fabrication, two failures PSNR scores identically, and
+settles whether back-projection is free or the frontier is tight as
+\citet{blau2018perception} predict.
+
+\section{Tentative timeline}
+
+\begin{table}[h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Week & Dates & Deliverable and gate \\
+\midrule
+1 & Oct 21--27 & Degradation, six metrics, data. \emph{Done: 21/21 checks, 28.9\,dB} \\
+2 & Oct 28--Nov 3 & SR3 denoiser, DDIM sampler; overfit-ten and $s{=}1$ gates \\
+3 & Nov 4--10 & Train on DIV2K; checkpoint chosen on validation split \\
+4 & Nov 11--17 & Strength knob; main sweep ($6{\times}5{\times}200$), resumable \\
+5 & Nov 18--24 & Back-projection variant; repeat sweep; statistics \\
+6 & Nov 25--Dec 1 & Figures, write-up, buffer \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Fallback.} If training has not converged by week~3 we substitute a
+public pretrained checkpoint; if the sweep runs long we drop to three seeds and
+BSD100 only. Either outcome of H3 is reportable, so nothing is all-or-nothing.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}

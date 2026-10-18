@@ -1,0 +1,105 @@
+% ===========================================================================
+%  STAND-IN for the official neurips_2025.sty
+% ---------------------------------------------------------------------------
+%  media.neurips.cc is not reachable from the machine this was authored on, so
+%  this file reproduces the official style's PAGE GEOMETRY and TYPE SIZES in
+%  order to verify the two-page limit. It is layout-faithful, not
+%  byte-faithful.
+%
+%  BEFORE SUBMITTING: download
+%     https://media.neurips.cc/Conferences/NeurIPS2025/Styles.zip
+%  and overwrite this file with the real neurips_2025.sty from the archive.
+%  main.tex needs no changes -- it uses only the documented interface
+%  (\usepackage[final]{neurips_2025}).
+% ===========================================================================
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{neurips_2025}[2025/01/01 NeurIPS 2025 layout stand-in]
+
+\newif\if@neuripsfinal \@neuripsfinalfalse
+\newif\if@neuripspreprint \@neuripspreprintfalse
+\newif\if@neuripsnonatbib \@neuripsnonatbibfalse
+\DeclareOption{final}{\@neuripsfinaltrue}
+\DeclareOption{preprint}{\@neuripspreprinttrue}
+\DeclareOption{nonatbib}{\@neuripsnonatbibtrue}
+\ProcessOptions\relax
+
+% ---------------------------------------------------------------- geometry
+% The official style sets these explicitly rather than via geometry.
+\setlength{\paperheight}{11in}
+\setlength{\paperwidth}{8.5in}
+\setlength{\oddsidemargin}{.5in}
+\setlength{\evensidemargin}{.5in}
+\setlength{\marginparwidth}{0.07in}
+\setlength{\topmargin}{-0.7in}
+\setlength{\textheight}{9.0in}
+\setlength{\textwidth}{5.5in}
+\setlength{\columnsep}{2pc}
+\setlength{\headheight}{12pt}
+\setlength{\headsep}{25pt}
+\setlength{\footskip}{30pt}
+\setlength{\parindent}{\z@}
+\setlength{\parskip}{5.5pt plus 2pt minus 1pt}
+\setlength{\topsep}{4pt plus 1pt minus 2pt}
+\setlength{\partopsep}{1pt plus 0.5pt minus 0.5pt}
+\setlength{\itemsep}{2pt plus 1pt minus 0.5pt}
+\setlength{\parsep}{2pt plus 1pt minus 0.5pt}
+\widowpenalty=10000
+\clubpenalty=10000
+
+% ------------------------------------------------------------------- fonts
+% NeurIPS papers are set in Times.
+\RequirePackage{times}
+
+% ---------------------------------------------------------------- sections
+\RequirePackage{titlesec}
+\titleformat{\section}{\large\bfseries\raggedright}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries\raggedright}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\raggedright}{\thesubsubsection}{1em}{}
+\titlespacing*{\section}{0pt}{2.0ex plus 0.5ex minus .2ex}{1.0ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{1.6ex plus 0.4ex minus .2ex}{0.8ex plus .2ex}
+
+% ------------------------------------------------------------------- title
+\renewcommand{\maketitle}{%
+  \par
+  \begingroup
+    \renewcommand{\thefootnote}{\fnsymbol{footnote}}%
+    \@maketitle
+  \endgroup
+  \let\maketitle\relax
+  \let\@maketitle\relax
+}
+\def\@maketitle{%
+  \vbox{%
+    \hsize\textwidth
+    \linewidth\hsize
+    \centering
+    {\LARGE\bfseries\@title\par}
+    \vskip 0.3in
+    {\normalsize\@author\par}
+    \vskip 0.2in
+  }%
+}
+
+% ------------------------------------------------------------------ abstract
+\renewenvironment{abstract}{%
+  \vskip 0.075in
+  \centerline{\large\bfseries Abstract}%
+  \vspace{0.5ex}%
+  \begin{quote}\small
+}{%
+  \par\end{quote}\vskip 1ex
+}
+
+% ---------------------------------------------------------------- bibliography
+\if@neuripsnonatbib\else
+  \RequirePackage{natbib}
+\fi
+\renewcommand{\refname}{References}
+\let\neurips@thebibliography\thebibliography
+\renewcommand{\thebibliography}[1]{%
+  \small\neurips@thebibliography{#1}%
+  \setlength{\itemsep}{0pt}%
+}
+
+\endinput
