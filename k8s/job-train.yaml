@@ -1,0 +1,89 @@
+# The training run. A Job, not a Pod.
+#
+# Three reasons it must be a Job:
+#   1. NRP caps bare pods at 2 GPUs and asks you to use Jobs for real work.
+#   2. A Job releases its GPU as soon as the script exits. A pod holds it
+#      until you remember to delete it.
+#   3. Nodes get drained and pods get evicted. backoffLimit plus the
+#      auto-resume in nrp_train_entry.sh means an eviction costs at most the
+#      steps since the last checkpoint, not the whole run.
+#
+# That last point is why this is survivable at all: the run is measured in
+# days and NRP is shared, preemptible infrastructure. Assume you will be
+# evicted at least once.
+#
+#   kubectl apply -f k8s/job-train.yaml
+#   kubectl logs -f job/faithful-sr-train
+#
+# One GPU is deliberate. This project trains exactly one model, and a 62M
+# UNet at 128px fits comfortably in 24 GB. Multi-GPU would roughly halve
+# wall-clock while adding DDP failure modes to a six-week schedule. The place
+# to spend parallelism is the SWEEP, which is embarrassingly parallel across
+# (strength, seed) -- see k8s/job-sweep.yaml.
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: faithful-sr-train
+spec:
+  backoffLimit: 12              # survive evictions; each retry auto-resumes
+  completions: 1
+  parallelism: 1
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: train
+          image: pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -euo pipefail
+              cd /work/faithful-sr
+              bash scripts/nrp_train_entry.sh
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: STEPS
+              value: "300000"
+            - name: BATCH_SIZE
+              value: "16"
+            - name: PATCH
+              value: "128"
+            - name: CKPT_DIR
+              value: "/work/checkpoints"
+            - name: DATA_ROOT
+              value: "/work/data"
+          resources:
+            requests:
+              nvidia.com/gpu: "1"
+              cpu: "8"
+              memory: 32Gi
+            limits:
+              nvidia.com/gpu: "1"
+              cpu: "12"
+              memory: 48Gi
+          volumeMounts:
+            - name: work
+              mountPath: /work
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: work
+          persistentVolumeClaim:
+            claimName: faithful-sr-data
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 8Gi
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.product
+                    operator: In
+                    values:
+                      # Verify with: kubectl get nodes -L nvidia.com/gpu.product
+                      - NVIDIA-GeForce-RTX-4090
+                      - NVIDIA-GeForce-RTX-5090

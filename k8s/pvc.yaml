@@ -1,0 +1,30 @@
+# Persistent storage for datasets, checkpoints and results.
+#
+# One volume holds everything, because the training Job and the later sweep
+# Jobs all need the same datasets and the sweep needs the checkpoint the
+# training Job produced.
+#
+# Sizing:
+#   DIV2K train + val + benchmarks      ~ 6 GB
+#   checkpoints, 5 retained at ~1 GB    ~ 5 GB   (train.py --keep-last 5)
+#   sweep results (JSON, one per sample)  < 1 GB
+#   sample images kept for figures      ~ 5 GB
+# 100Gi leaves room to re-run without pruning between attempts.
+#
+# BEFORE APPLYING: confirm the storage class exists in your namespace.
+#   kubectl get storageclass
+# NRP's filesystem classes are regional and the right one depends on where
+# your namespace's GPUs are. Pick a ReadWriteMany class so several sweep pods
+# can mount it at once; ReadWriteOnce would serialise the sweep onto one node.
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: faithful-sr-data
+spec:
+  storageClassName: rook-cephfs            # verify with: kubectl get storageclass
+  accessModes:
+    - ReadWriteMany                        # needed for parallel sweep pods
+  resources:
+    requests:
+      storage: 100Gi

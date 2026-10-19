@@ -83,6 +83,11 @@ def main() -> int:
     ap.add_argument("--ckpt-every", type=int, default=5_000)
     ap.add_argument("--out", default="checkpoints")
     ap.add_argument("--resume", default=None)
+    ap.add_argument("--keep-last", type=int, default=5,
+                    help="how many numbered checkpoints to retain (0 = all). "
+                         "Each is ~1 GB (model + EMA + Adam state), so an "
+                         "unpruned 300k-step run writes ~60 GB and will fill "
+                         "a shared PVC.")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--overfit", type=int, default=0,
                     help="train on N images only -- the overfit-10 gate")
@@ -164,8 +169,18 @@ def main() -> int:
             }
             path = out / f"step_{step+1:07d}.pt"
             torch.save(ck, path)
-            torch.save(ck, out / "latest.pt")
+            # Write latest.pt atomically. A pod evicted mid-write would
+            # otherwise leave a truncated file, and the restarted job would
+            # resume from a corrupt checkpoint instead of the last good one.
+            tmp = out / "latest.pt.tmp"
+            torch.save(ck, tmp)
+            tmp.replace(out / "latest.pt")
             print(f"    saved {path}")
+
+            if args.keep_last > 0:
+                numbered = sorted(out.glob("step_*.pt"))
+                for old in numbered[: -args.keep_last]:
+                    old.unlink()
 
     print(f"\n  done in {(time.perf_counter()-t_start)/3600:.2f}h")
     return 0

@@ -1,0 +1,69 @@
+# Interactive pod for setup and the gates. NOT for the training run.
+#
+# Use it to: clone the repo onto the PVC, download the datasets, run gates 1
+# and 2, and run the overfit-10 gate. All of that is interactive and
+# short-lived.
+#
+# NRP's rule on this is explicit: a GPU stays reserved for as long as the pod
+# exists, so an idle pod blocks it for everyone. Delete this pod the moment
+# you are done:
+#     kubectl delete pod faithful-sr-shell
+# The real training run goes through k8s/job-train.yaml instead, which frees
+# its GPU automatically when the script exits.
+#
+#   kubectl apply -f k8s/pod-interactive.yaml
+#   kubectl exec -it faithful-sr-shell -- bash
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: faithful-sr-shell
+spec:
+  restartPolicy: Never
+  containers:
+    - name: main
+      # CUDA 12.8 or newer is REQUIRED if you want this to land on a 5090:
+      # Blackwell is sm_120 and older torch builds have no kernels for it.
+      # They fail at the first matmul, not at startup. Verify the tag exists
+      # before applying.
+      image: pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime
+      command: ["sleep", "infinity"]
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+          cpu: "4"
+          memory: 24Gi
+        limits:
+          nvidia.com/gpu: "1"
+          cpu: "8"
+          memory: 32Gi
+      volumeMounts:
+        - name: work
+          mountPath: /work
+        - name: dshm
+          mountPath: /dev/shm
+  volumes:
+    - name: work
+      persistentVolumeClaim:
+        claimName: faithful-sr-data
+    # The default 64 MB /dev/shm is too small for PyTorch DataLoader workers;
+    # the symptom is a "bus error" that looks like a code bug.
+    - name: dshm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 8Gi
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: nvidia.com/gpu.product
+                operator: In
+                values:
+                  # CONFIRM THESE STRINGS FIRST. The NRP docs table is marked
+                  # out of date and does not list a 5090 at all. Run:
+                  #   kubectl get nodes -L nvidia.com/gpu.product
+                  # and copy the values exactly. A label that does not exist
+                  # does not error -- the pod just sits Pending forever.
+                  - NVIDIA-GeForce-RTX-4090
+                  - NVIDIA-GeForce-RTX-5090
