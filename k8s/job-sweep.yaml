@@ -1,0 +1,93 @@
+# The sweep, as an indexed Job: 8 pods, one GPU each, disjoint slices.
+#
+# This is where parallelism pays. Training is one model and one GPU; the
+# sweep is 6 strengths x 5 seeds x 200 images with no communication between
+# shards, so it divides perfectly. Eight shards turn roughly a day into about
+# three hours, and a shard that dies is retried alone without touching the
+# others.
+#
+# completionMode: Indexed is what makes this work -- each pod gets a distinct
+# JOB_COMPLETION_INDEX, which run_sweep.py turns into items[k::n]. The work
+# list is sorted deterministically so every pod computes the same list and
+# the slices cannot overlap.
+#
+# Results land as one JSON per (image, strength) on the shared PVC, so the
+# whole thing is resumable: re-apply after any failure and finished groups
+# are skipped.
+#
+#   kubectl apply -f k8s/job-sweep.yaml
+#   kubectl get pods -l job-name=faithful-sr-sweep
+#   kubectl logs -f faithful-sr-sweep-0
+#
+# For the back-projection arm, change ARM to "--back-projection" and
+# metadata.name to faithful-sr-sweep-bp. It writes to a separate subtree, so
+# the two curves can never be mixed.
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: faithful-sr-sweep
+spec:
+  completionMode: Indexed
+  completions: 8
+  parallelism: 8                # lower this if your namespace GPU quota is smaller
+  backoffLimit: 24              # ~3 retries per shard
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: sweep
+          image: pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -euo pipefail
+              source /work/venv/bin/activate
+              cd /work/faithful-sr
+              echo "shard ${JOB_COMPLETION_INDEX} of ${NUM_SHARDS}"
+              python scripts/run_sweep.py \
+                --checkpoint /work/checkpoints/latest.pt \
+                --results /work/results/sweep \
+                --shard-index "${JOB_COMPLETION_INDEX}" \
+                --num-shards "${NUM_SHARDS}" \
+                ${ARM}
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: NUM_SHARDS
+              value: "8"          # must equal spec.completions
+            - name: ARM
+              value: ""           # "--back-projection" for the second arm
+          resources:
+            requests:
+              nvidia.com/gpu: "1"
+              cpu: "4"
+              memory: 24Gi
+            limits:
+              nvidia.com/gpu: "1"
+              cpu: "8"
+              memory: 32Gi
+          volumeMounts:
+            - name: work
+              mountPath: /work
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: work
+          persistentVolumeClaim:
+            claimName: faithful-sr-data     # must be ReadWriteMany for parallelism > 1
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 8Gi
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.product
+                    operator: In
+                    values:
+                      # Verify with: kubectl get nodes -L nvidia.com/gpu.product
+                      - NVIDIA-GeForce-RTX-4090
+                      - NVIDIA-GeForce-RTX-5090
