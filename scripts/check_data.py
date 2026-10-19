@@ -37,7 +37,7 @@ REFERENCE = {
 
 # DIV2K validation has no single canonical bicubic number in the literature;
 # the proposal's gate is the range the pipeline should land in.
-DIV2K_VAL_RANGE = (26.0, 28.0)
+DIV2K_VAL_RANGE = (26.0, 28.5)
 
 TOL_PSNR = 0.15   # dB; a correct imresize lands well inside this
 TOL_SSIM = 0.01

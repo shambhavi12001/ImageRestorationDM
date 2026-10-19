@@ -1,0 +1,75 @@
+{
+  "model": "EDSR x4 (Lim et al., CVPRW 2017)",
+  "weights": "/work/checkpoints/edsr_x4.pt",
+  "device": "cpu",
+  "results": {
+    "set5": {
+      "n": 5,
+      "psnr": 32.500335477167155,
+      "psnr_published": 32.46,
+      "psnr_delta": 0.040335477167154465,
+      "ssim": 0.8989321603492512,
+      "lr_consistency": 58.92613445957818,
+      "lpips": null,
+      "seconds_per_image": 16.34284154640045,
+      "manifest": {
+        "dataset": "set5",
+        "root": "/work/data/Set5",
+        "n_images": 5,
+        "scale": 4,
+        "fingerprint": "df58ca0a29ba3943"
+      }
+    },
+    "set14": {
+      "n": 14,
+      "psnr": 28.811875358082936,
+      "psnr_published": 28.8,
+      "psnr_delta": 0.011875358082935605,
+      "ssim": 0.7879390933995846,
+      "lr_consistency": 54.27663654694739,
+      "lpips": null,
+      "seconds_per_image": 28.19608224242828,
+      "manifest": {
+        "dataset": "set14",
+        "root": "/work/data/Set14",
+        "n_images": 14,
+        "scale": 4,
+        "fingerprint": "0aaa006333e108a3"
+      }
+    },
+    "bsd100": {
+      "n": 100,
+      "psnr": 27.720190197674548,
+      "psnr_published": 27.71,
+      "psnr_delta": 0.010190197674546653,
+      "ssim": 0.7420683949916668,
+      "lr_consistency": 54.16416645340516,
+      "lpips": null,
+      "seconds_per_image": 16.227585199559982,
+      "manifest": {
+        "dataset": "bsd100",
+        "root": "/work/data/BSD100",
+        "n_images": 100,
+        "scale": 4,
+        "fingerprint": "c11832033d63ff2e"
+      }
+    },
+    "urban100": {
+      "n": 100,
+      "psnr": 26.64659655513185,
+      "psnr_published": 26.64,
+      "psnr_delta": 0.006596555131849868,
+      "ssim": 0.8037170636046873,
+      "lr_consistency": 55.0591414509897,
+      "lpips": null,
+      "seconds_per_image": 78.56546067168995,
+      "manifest": {
+        "dataset": "urban100",
+        "root": "/work/data/Urban100",
+        "n_images": 100,
+        "scale": 4,
+        "fingerprint": "f2abb3f4de3664c4"
+      }
+    }
+  }
+}
