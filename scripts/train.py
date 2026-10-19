@@ -89,6 +89,12 @@ def main() -> int:
                          "unpruned 300k-step run writes ~60 GB and will fill "
                          "a shared PVC.")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--amp", default="bf16", choices=["off", "bf16"],
+                    help="bfloat16 autocast on CUDA. Roughly 3-4x faster than "
+                         "fp32 on a 4090 because it reaches the tensor cores. "
+                         "bf16 rather than fp16: it has the same exponent "
+                         "range as fp32, so the epsilon-prediction loss cannot "
+                         "underflow and no GradScaler is needed.")
     ap.add_argument("--overfit", type=int, default=0,
                     help="train on N images only -- the overfit-10 gate")
     args = ap.parse_args()
@@ -103,8 +109,14 @@ def main() -> int:
 
     train = SRDataset(data_root, "div2k_train", scale=scale,
                       limit=args.overfit or None)
+    if device == "cuda":
+        # TF32 for the fp32 path too; harmless at this precision and free.
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cudnn.benchmark = True      # fixed shapes, so autotune pays
+
     print(f"\n  device {device} | train {len(train)} images | patch {args.patch} "
-          f"| batch {args.batch_size}")
+          f"| batch {args.batch_size} | amp {args.amp if device == 'cuda' else 'off (cpu)'}")
 
     model = UNet(image_size=args.patch, base=args.base).to(device)
     diff = GaussianDiffusion(T=args.T, schedule=args.schedule, device=device)
@@ -138,7 +150,9 @@ def main() -> int:
         x0, cond = patch_batch(train, idx, args.patch, scale, rng)
         x0, cond = x0.to(device), cond.to(device)
 
-        loss = diff.loss(model, x0, cond, loss_type="l1")
+        use_amp = args.amp == "bf16" and device == "cuda"
+        with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_amp):
+            loss = diff.loss(model, x0, cond, loss_type="l1")
         opt.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
