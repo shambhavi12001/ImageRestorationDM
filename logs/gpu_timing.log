@@ -1,0 +1,17 @@
+name, memory.total [MiB], driver_version
+NVIDIA A10, 23028 MiB, 615.71.09
+
+  device cuda | train 800 images | patch 128 | batch 16 | amp bf16
+  model 61.8M params
+  schedule: {"t=0": 0.9998999834060669, "t=250": 0.5214230418205261, "t=500": 0.07779666036367416, "t=750": 0.003300158306956291, "t=999": 4.0358296246267855e-05}
+  step      50  loss 0.6934  0.08 it/s  eta 1.2h
+  step     100  loss 0.4598  0.11 it/s  eta 0.8h
+  step     150  loss 0.2415  0.14 it/s  eta 0.5h
+  step     200  loss 0.1180  0.17 it/s  eta 0.3h
+  step     250  loss 0.0931  0.19 it/s  eta 0.2h
+  step     300  loss 0.0839  0.22 it/s  eta 0.1h
+  step     350  loss 0.0858  0.24 it/s  eta 0.1h
+  step     400  loss 0.0791  0.26 it/s  eta 0.0h
+    saved /work/timing_test/step_0000400.pt
+
+  done in 0.43h

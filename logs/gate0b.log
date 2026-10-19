@@ -1,0 +1,18 @@
+
+  [ok  ] torch down matches numpy imresize         max |d| 4.86e-05
+  [ok  ] torch up matches numpy imresize           max |d| 2.29e-05
+  [ok  ] H(pinv(y)) == y                           max err 2.98e-07
+  [ok  ] back_project drives ||Hx-y|| to zero      1.67e-02 -> 3.92e-08
+  [ok  ] ...on a corrupted image too               4.02e-08
+  [ok  ] null-space detail survives                mean |d| 0.2319
+  [ok  ] step count is linear in strength          [0, 10, 20, 30, 40, 50]
+  [ok  ] schedule descends and always ends at 0    
+  [ok  ] rejects strength > 1                      
+  [ok  ] rejects indivisible step spacing          
+  [ok  ] s=0 returns bicubic exactly               nfe 0
+  [ok  ] same seed reproduces bit-for-bit          
+  [ok  ] different seed gives a different sample   mean |d| 113.8
+  [ok  ] nfe recorded and rises with strength      [10, 30, 50]
+  [ok  ] back-projection raises LR consistency     11.9 -> 29.1 dB
+
+  15/15 checks passed

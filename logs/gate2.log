@@ -1,0 +1,15 @@
+
+  device: cpu
+  warning: CPU inference on the large EDSR is slow (minutes per image on Urban100)
+  loaded 43.1M parameters from /work/checkpoints/edsr_x4.pt
+
+  dataset        n     PSNR  published   delta     SSIM   LR-cons   s/img
+  -----------------------------------------------------------------------
+  set5           5    32.50      32.46   +0.04   0.8989      58.9    16.3
+  set14         14    28.81      28.80   +0.01   0.7879      54.3    28.2
+  bsd100       100    27.72      27.71   +0.01   0.7421      54.2    16.2
+  urban100     100    26.65      26.64   +0.01   0.8037      55.1    78.6
+
+  wrote results/edsr_baseline.json
+
+  Gate 2 passed: the evaluation path reproduces published EDSR numbers. The harness can be trusted for the diffusion sweep.

@@ -1,0 +1,32 @@
+
+  bicubic x4 baseline on bundled images
+  image          PSNR dB     SSIM   LR-cons dB
+  astronaut       26.844   0.8429        37.62
+  chelsea         31.476   0.8064        43.75
+  coffee          27.292   0.7649        40.68
+  rocket          29.995   0.8533        45.97
+  mean            28.902
+
+  [ok  ] imresize: constant preserved                 max dev 0.00e+00
+  [ok  ] imresize: weights normalised                 max dev 0.00e+00
+  [ok  ] imresize: no half-pixel shift                max deviation 0.00e+00 px
+  [ok  ] imresize: antialiasing active                mean 127.5 std 0.3
+  [ok  ] imresize: shapes round-trip                  lr (12, 13, 3) up (48, 52, 3)
+  [ok  ] imresize: uint8 stays uint8                  uint8, uint8
+  [ok  ] modcrop: divisible by scale                  (48, 52)
+  [ok  ] psnr: identity is inf                        
+  [ok  ] ssim: identity is 1                          1.00000000
+  [ok  ] rgb_to_y: white -> 235                       235.000
+  [ok  ] rgb_to_y: black -> 16                        16.000
+  [ok  ] psnr: dtype invariant                        12.600010 vs 12.600010
+  [ok  ] ssim: agrees with scikit-image               ours 0.027600 skimage 0.027600
+  [ok  ] psnr: border crop applied                    
+  [ok  ] lr_consistency: bicubic is self-consistent   39.04 dB
+  [ok  ] degrade: hr and up same shape                (64, 64, 3) (64, 64, 3)
+  [ok  ] cross_seed_std: identical -> 0               
+  [ok  ] cross_seed_std: recovers injected sigma      0.02085 (colour-averaged, so sigma/sqrt(3))
+  [ok  ] cross_seed_std: rejects single sample        
+  [ok  ] gate: bicubic PSNR in plausible range        mean 28.90 dB over 4 images
+  [ok  ] gate: bicubic is LR-consistent               min 37.6 dB
+
+  21/21 checks passed

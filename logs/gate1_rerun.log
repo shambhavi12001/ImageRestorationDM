@@ -1,0 +1,15 @@
+
+bicubic x4 baseline, HR from /work/data/
+
+  dataset           n     PSNR      ref       d     SSIM      ref   LR-cons
+  -------------------------------------------------------------------------
+  set5              5    28.43    28.42   +0.01   0.8113   0.8104      38.9
+  set14            14    26.09    26.00   +0.09   0.7050   0.7027      38.2
+  bsd100          100    25.96    25.96   -0.00   0.6680   0.6675      39.3
+  urban100        100    23.14    23.14   -0.00   0.6581   0.6577      36.2
+  div2k_val       100    28.11  [26-28]           0.7745               40.2
+
+  div2k_train: 800 images
+
+
+  Gate 1 passed: bicubic reproduces published numbers.

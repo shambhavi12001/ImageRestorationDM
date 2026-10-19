@@ -21,7 +21,6 @@ results/**/*.png
 
 # LaTeX build products
 *.aux
-*.log
 *.out
 *.bbl
 *.blg
