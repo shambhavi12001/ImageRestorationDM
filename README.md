@@ -28,6 +28,23 @@ run is the critical path.
 
 **36/36 correctness checks passing.**
 
+### What's left, and where it runs
+
+| Item | Where | Note |
+|---|---|---|
+| Download datasets | GPU box | ~5 GB, `scripts/download_data.sh` |
+| Gate 1 — bicubic reproduces | GPU box | an afternoon; needs the data, not the GPU |
+| Gate 2 — EDSR reproduces | GPU box | needs the pretrained checkpoint |
+| Gate 3 — overfit ten images | GPU box | ~1 h; catches architecture bugs before a multi-day run |
+| **Train the diffusion model** | GPU box | **critical path**, half a day to three days depending on the card |
+| T8 — sweep runner | anywhere | testable against a dummy model, before training finishes |
+| T9 — statistics and plots | anywhere | same |
+| Main sweep, then back-projection sweep | GPU box | weeks 4 and 5 |
+
+Training happens **once**. EDSR is downloaded, bicubic is deterministic, and
+the back-projection variant reuses the same weights — so this is the only run
+that can blow the schedule.
+
 ---
 
 ## Quick start
@@ -189,6 +206,34 @@ data/
 HR only. BSD100 and Urban100 are the contrast pair the result lives in:
 invented stochastic texture is perceptually cheap, invented regular structure
 is not.
+
+---
+
+## Timeline against the proposal
+
+| Week | Dates | Plan | Actual |
+|---|---|---|---|
+| 1 | Oct 21–27 | Degradation, metrics, data; gates 1–2 | code done early; gates blocked on download |
+| 2 | Oct 28–Nov 3 | Denoiser and sampler; overfit gate | code done early |
+| 3 | Nov 4–10 | Train on DIV2K | **critical path** |
+| 4 | Nov 11–17 | Strength knob; main sweep | knob already done |
+| 5 | Nov 18–24 | Back-projection sweep; statistics | back-projection already done |
+| 6 | Nov 25–Dec 1 | Figures, write-up, buffer | |
+
+Running ahead on code buys slack for week 3, the only week that can overrun.
+
+**Fallback.** If training has not converged by the end of week 3, substitute a
+public pretrained diffusion checkpoint and keep the full sweep — the
+contribution is the measurement protocol, not the weights. If the sweep runs
+long, drop to three seeds and BSD100 only. Decide in week 4, not week 6.
+
+## Open questions
+
+- **Which GPU?** It decides the training config. If the ETA comes back at
+  multiple days, cut the model to ~30M parameters or train at 96px patches
+  rather than let training eat weeks 3 through 5.
+- **Reduced sweep shape.** Full is 6 strengths × 5 seeds × 2 test sets.
+  Decide before week 4 whether to cut to 3 seeds.
 
 ---
 
